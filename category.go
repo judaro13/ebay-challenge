@@ -54,8 +54,8 @@ func (c *Category) findAncestors() string {
 	for category != nil {
 		if category.Parent != nil {
 			ancestors = "/" + strconv.Itoa(category.ParentID) + ancestors
-			category = category.Parent
 		}
+		category = category.Parent
 	}
 	return ancestors
 }
