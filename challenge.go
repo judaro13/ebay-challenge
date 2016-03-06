@@ -8,8 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"strconv"
-	"strings"
 
 	_ "github.com/mattn/go-sqlite3" // go get github.com/mattn/go-sqlite3
 	flag "github.com/ogier/pflag"   //go get github.com/ogier/pflag
@@ -39,30 +37,6 @@ const (
      ORDER BY id ASC`
 )
 
-// GetCategoriesResponse contains the categories from the ebay API.
-type GetCategoriesResponse struct {
-	XMLName xml.Name `xml:"GetCategoriesResponse"`
-
-	Timestamp     string      `xml:"Timestamp"`
-	Build         string      `xml:"Build"`
-	CategoryArray []*Category `xml:"CategoryArray>Category"`
-}
-
-// Category contains the categories
-type Category struct {
-	XMLName          xml.Name    `xml:"Category"`
-	BestOfferEnabled bool        `xml:"BestOfferEnabled"`
-	ID               int         `xml:"CategoryID"`
-	Level            int         `xml:"CategoryLevel"`
-	Name             string      `xml:"CategoryName"`
-	ParentID         int         `xml:"CategoryParentID"`
-	LeafCategory     bool        `xml:"LeafCategory"`
-	LSD              bool        `xml:"LSD"`
-	Indexed          bool        `xml:"-"`
-	Children         []*Category `xml:"-"`
-	Parent           *Category   `xml:"-"`
-}
-
 func checkErr(err error) {
 	if err != nil {
 		log.Fatal(err)
@@ -84,60 +58,20 @@ func main() {
 }
 
 func render(id int) {
-	dict := getCategory(id)
+	category := getCategory(id)
+
+	if category == nil {
+		fmt.Printf("Category %d not found\n", id)
+		return
+	}
 	f, err := os.Create(fmt.Sprintf(`%d.html`, id))
 	defer f.Close()
 	checkErr(err)
 	t := template.Must(template.ParseFiles("category.html"))
-	err = t.Execute(f, dict.CategoryArray[0])
+	err = t.Execute(f, category)
 	if err != nil {
 		fmt.Println("executing template:", err)
 	}
-}
-
-func (c *Category) index(categories *GetCategoriesResponse) {
-	if c.Indexed {
-		return
-	}
-
-	parent := findParent(c.ParentID, categories)
-	if parent != nil && c.ID != c.ParentID {
-		c.Parent = parent
-		parent.Children = append(parent.Children, c)
-		parent.index(categories)
-	}
-
-	c.Indexed = true
-
-}
-
-func findParent(parentID int, categories *GetCategoriesResponse) *Category {
-	for _, category := range categories.CategoryArray {
-		if category.ID == parentID {
-			return category
-		}
-	}
-	return nil
-}
-
-func (c *Category) debug() {
-	fmt.Printf("%s%s\n", strings.Repeat("    ", c.Level), c.Name)
-	for _, child := range c.Children {
-		child.debug()
-	}
-}
-
-func (c *Category) findAncestors() string {
-	ancestors := "/"
-	category := c
-
-	for category != nil {
-		if category.Parent != nil {
-			ancestors = "/" + strconv.Itoa(category.ParentID) + ancestors
-			category = category.Parent
-		}
-	}
-	return ancestors
 }
 
 func rebuild() {
@@ -149,7 +83,7 @@ func rebuild() {
 	// xml.Unmarshal([]byte(xmlContent), dict)
 
 	for _, category := range dict.CategoryArray {
-		category.index(dict)
+		category.index(dict.CategoryArray)
 		fmt.Printf(".")
 	}
 
@@ -195,7 +129,15 @@ func insertCategory(db *sql.DB, category *Category) {
 	fmt.Printf("*")
 }
 
-func getCategory(id int) *GetCategoriesResponse {
+func getCategory(id int) *Category {
+	categories := findAndIndex(id)
+	if len(categories) > 0 {
+		return categories[0]
+	}
+	return nil
+}
+
+func findAndIndex(id int) []*Category {
 	db, err := sql.Open("sqlite3", "challenge.db")
 	checkErr(err)
 
@@ -205,25 +147,23 @@ func getCategory(id int) *GetCategoriesResponse {
 
 	defer rows.Close()
 
-	dict := &GetCategoriesResponse{
-		CategoryArray: []*Category{},
-	}
+	categoryArray := []*Category{}
 
 	for rows.Next() {
 		category := &Category{}
 		err = rows.Scan(&category.ID, &category.BestOfferEnabled, &category.Level, &category.ParentID, &category.Name, &category.LeafCategory, &category.LSD)
 		checkErr(err)
 		if category.ID >= id {
-			dict.CategoryArray = append(dict.CategoryArray, category)
+			categoryArray = append(categoryArray, category)
 		}
 	}
 
 	// fmt.Printf("%v", catArray)
 
-	for _, category := range dict.CategoryArray {
-		category.index(dict)
+	for _, category := range categoryArray {
+		category.index(categoryArray)
 		fmt.Printf(".")
 	}
 	fmt.Println("")
-	return dict
+	return categoryArray
 }
