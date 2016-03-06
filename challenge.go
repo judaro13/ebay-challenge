@@ -25,7 +25,8 @@ func main() {
 	if *rebuildOpt {
 		rebuild()
 	} else if *renderOpt > 0 {
-		render(*renderOpt)
+		r := NewRenderer()
+		r.RenderToFile(*renderOpt)
 	} else {
 		flag.PrintDefaults()
 	}
