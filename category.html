@@ -1,19 +1,22 @@
 {{define "category"}}
-    <li> {{.Name}} </li>
-    <li>
-        <ul>
-            {{range .Children}}
-                {{template "category" .}}
-            {{end}}
-        </ul>
+    <li> {{.Name}} 
+        {{if .Children}}
+            <ul>
+                {{range .Children}}
+                    {{template "category" .}}
+                {{- end}}
+            </ul>
+        {{- end}}
     </li>
-{{end}}}
+{{- end}}}
 
 <html>
     <head>
-        <title>{{.Timestamp}}</title>
+        <title>{{.Name}}</title>
     </head>
     <body>
-
+        <ul>
+             {{ template "category" .}}
+        </ul>
     </body>
 </html>

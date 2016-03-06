@@ -90,7 +90,7 @@ func render(id int) {
 	dict := getCategory(id)
 
 	t := template.Must(template.New("categories").Parse(string(dat)))
-	err = t.Execute(os.Stdout, dict)
+	err = t.Execute(os.Stdout, dict.CategoryArray[0])
 	if err != nil {
 		fmt.Println("executing template:", err)
 	}
