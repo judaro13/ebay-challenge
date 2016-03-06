@@ -2,9 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"encoding/xml"
 	"fmt"
-	"io/ioutil"
 	"os"
 )
 
@@ -30,14 +28,12 @@ const (
 
 func rebuild() {
 	rebuildDB()
-	dict := &GetCategoriesResponse{}
-	content, err := ioutil.ReadFile("full")
 
-	xml.Unmarshal([]byte(content), dict)
-	// xml.Unmarshal([]byte(xmlContent), dict)
+	downloader := NewDownloader()
+	categories := downloader.GetCategories()
 
-	for _, category := range dict.CategoryArray {
-		category.index(dict.CategoryArray)
+	for _, category := range categories {
+		category.index(categories)
 		fmt.Printf(".")
 	}
 
@@ -45,7 +41,7 @@ func rebuild() {
 	defer db.Close()
 	checkErr(err)
 
-	for _, category := range dict.CategoryArray {
+	for _, category := range categories {
 		insertCategory(db, category)
 	}
 
