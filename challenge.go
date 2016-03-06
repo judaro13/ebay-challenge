@@ -84,13 +84,12 @@ func main() {
 }
 
 func render(id int) {
-	dat, err := ioutil.ReadFile("category.html")
-	checkErr(err)
-
 	dict := getCategory(id)
-
-	t := template.Must(template.New("categories").Parse(string(dat)))
-	err = t.Execute(os.Stdout, dict.CategoryArray[0])
+	f, err := os.Create(fmt.Sprintf(`%d.html`, id))
+	defer f.Close()
+	checkErr(err)
+	t := template.Must(template.ParseFiles("category.html"))
+	err = t.Execute(f, dict.CategoryArray[0])
 	if err != nil {
 		fmt.Println("executing template:", err)
 	}
