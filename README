@@ -1,0 +1,55 @@
+Introduction
+-----------
+The application was created in GO language. This include 5 go files with the solution for the problem exposed.
+
+The main file is challenge.go where it take the params and execute according to them.
+
+Through downloader.go is made the request to the ebay API, this data is parsed from the xml structure to the own category
+structure in catgory.go file.
+
+The category.go file have the definition for the category, was implemented a own data structure that include almost all the
+fields from the request categories at the ebay API and two additional field: Children and Parent.
+This additional field let me handle all the categories as a tree.
+
+The indexer.go have the function to handle the DB structure and index the categories in there. Was created
+a single table to handle all this called categories and have the next structure
+
+sqlite> .schema categories
+CREATE TABLE categories (
+        id integer not null primary key, 
+        bestOfferEnabled text,
+        level integer,
+        parentId integer,
+        name text,
+        leafCategory boolean,
+        lsd boolean,
+        eldersPath text, 
+        FOREIGN KEY(parentId) REFERENCES category(id)
+    );
+    
+In the eldersPath is stored a string with the path of the ancestors. This is generated with the tree schema
+of categories and this is used to retrieve all the categories(subcategories) related with one.
+
+The renderer.go file handle the renderization of a given category, this with the help of the template category.html render
+all the related categories of the category. All the data is query in the database and parsed to the local tree structure
+for sorting it.
+
+
+Instalation
+-----------
+    1 - Be sure you have installed go language in you equipment
+    2 - Install the go packages.  
+    * mattn/go-sqlite3, it can be done as follow (linux command)
+        $ go get github.com/mattn/go-sqlite3
+    * spf13/pflag, it can be done as follow (linux command)
+        $ go get github.com/spf13/pflag
+    
+    
+Run the application
+-------------------
+    Inside the application folder run as follow in console
+    * For create and delete(if exist) the db
+        $ go run *.go --rebuild 
+    * For render a category
+        $go run *.go --render 12345
+    

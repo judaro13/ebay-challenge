@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -10,7 +11,7 @@ import (
 const (
 	createCategoriesTable = `create table categories (
         id integer not null primary key, 
-        bestOfferEnabled boolean,
+        bestOfferEnabled text,
         level integer,
         parentId integer,
         name text,
@@ -26,9 +27,22 @@ const (
      ORDER BY id ASC`
 )
 
-func rebuild() {
-	rebuildDB()
+//Indexer : Structure definer
+type Indexer struct {
+	dbName string
+}
 
+//NewIndexer : Generate a new object
+func NewIndexer(dbName string) *Indexer {
+	indexer := &Indexer{
+		dbName: dbName,
+	}
+	return indexer
+}
+
+//Build : Index all categories
+func (indexer *Indexer) Build() {
+	indexer.createdDB()
 	downloader := NewDownloader()
 	categories := downloader.GetCategories()
 
@@ -37,19 +51,19 @@ func rebuild() {
 		fmt.Printf(".")
 	}
 
-	db, err := sql.Open("sqlite3", "challenge.db")
-	defer db.Close()
+	db, err := sql.Open("sqlite3", indexer.dbName)
 	checkErr(err)
+	defer db.Close()
 
 	for _, category := range categories {
-		insertCategory(db, category)
+		indexer.insertCategory(db, category)
 	}
-
 }
 
-func rebuildDB() {
-	os.Remove("challenge.db")
-	db, err := sql.Open("sqlite3", "challenge.db")
+// createdDB delete and generate a new DB
+func (indexer *Indexer) createdDB() {
+	os.Remove(indexer.dbName)
+	db, err := sql.Open("sqlite3", indexer.dbName)
 	defer db.Close()
 	checkErr(err)
 
@@ -57,7 +71,8 @@ func rebuildDB() {
 	checkErr(err)
 }
 
-func insertCategory(db *sql.DB, category *Category) {
+// insertCategory: Insert a given category to the DB
+func (indexer *Indexer) insertCategory(db *sql.DB, category *Category) {
 
 	fmt.Printf("*")
 	tx, err := db.Begin()
@@ -77,44 +92,42 @@ func insertCategory(db *sql.DB, category *Category) {
 		category.findAncestors())
 	checkErr(err)
 	tx.Commit()
-
 }
 
-func getCategory(id int) *Category {
-	categories := findAndIndex(id)
-	if len(categories) > 0 {
-		return categories[0]
-	}
-	return nil
-}
-
-func findAndIndex(id int) []*Category {
-	db, err := sql.Open("sqlite3", "challenge.db")
+// getCategory: Retrieve a category and index all related categories
+func (indexer *Indexer) getCategory(id int) *Category {
+	db, err := sql.Open("sqlite3", indexer.dbName)
 	checkErr(err)
 
 	defer db.Close()
 	rows, err := db.Query(queryCategory, id, fmt.Sprintf(`%%/%d/%%`, id))
-	checkErr(err)
+	if err != nil {
+		log.Fatal(err)
+		println("Try running first --rebuild")
+	}
 
 	defer rows.Close()
 
-	categoryArray := []*Category{}
+	categories := []*Category{}
 
 	for rows.Next() {
 		category := &Category{}
 		err = rows.Scan(&category.ID, &category.BestOfferEnabled, &category.Level, &category.ParentID, &category.Name, &category.LeafCategory, &category.LSD)
 		checkErr(err)
 		if category.ID >= id {
-			categoryArray = append(categoryArray, category)
+			categories = append(categories, category)
 		}
 	}
 
-	// fmt.Printf("%v", catArray)
-
-	for _, category := range categoryArray {
-		category.index(categoryArray)
+	for _, category := range categories {
+		category.index(categories)
 		fmt.Printf(".")
 	}
+
 	fmt.Println("")
-	return categoryArray
+	if len(categories) > 0 {
+		return categories[0]
+	}
+	fmt.Printf("category %d was not found\n", id)
+	return nil
 }

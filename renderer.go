@@ -7,23 +7,29 @@ import (
 )
 
 const (
+	// Path with the html template
 	templateFile = `category.html`
 )
 
+//Renderer defined struc
 type Renderer struct {
-	t *template.Template
+	t       *template.Template
+	indexer *Indexer
 }
 
-func NewRenderer() *Renderer {
+//NewRenderer  create a new object Render
+func NewRenderer(indexer *Indexer) *Renderer {
 	renderer := &Renderer{
-		t: template.Must(template.ParseFiles(templateFile)),
+		t:       template.Must(template.ParseFiles(templateFile)),
+		indexer: indexer,
 	}
 
 	return renderer
 }
 
-func (r *Renderer) RenderToFile(id int) {
-	category := getCategory(id)
+//RenderToFile create a new html with the given category
+func (render *Renderer) RenderToFile(id int) {
+	category := render.indexer.getCategory(id)
 
 	if category == nil {
 		return
@@ -32,7 +38,7 @@ func (r *Renderer) RenderToFile(id int) {
 	defer f.Close()
 	checkErr(err)
 
-	err = r.t.Execute(f, category)
+	err = render.t.Execute(f, category)
 	if err != nil {
 		fmt.Println("executing template:", err)
 	}

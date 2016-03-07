@@ -1,5 +1,6 @@
 {{define "category"}}
-    <li> {{.Name}} 
+    <li> {{.Name}} -> ID: {{.ID}}, Level: {{.Level}}, Best Offer: {{ if .BestOfferEnabled}} Yes {{else}} No {{end}}
+        
         {{if .Children}}
             <ul>
                 {{range .Children}}
@@ -13,9 +14,11 @@
 <html>
     <head>
         <title>{{.Name}}</title>
+        <link rel="stylesheet" type="text/css" href="style.css">
     </head>
     <body>
-        <ul>
+        {{.Name}}
+        <ul class='tree'>
              {{ template "category" .}}
         </ul>
     </body>

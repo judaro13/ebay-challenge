@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Constant variables for query to ebay API
 const (
 	url           = `https://api.sandbox.ebay.com/ws/api.dll`
 	appName       = `EchoBay62-5538-466c-b43b-662768d6841`
@@ -17,7 +18,6 @@ const (
 	compatibility = `861`
 	xmlData       = `<?xml version="1.0" encoding="utf-8"?>
 <GetCategoriesRequest xmlns="urn:ebay:apis:eBLBaseComponents">
-  <CategoryParent>37908</CategoryParent>
   <CategorySiteID>0</CategorySiteID>
   <ViewAllNodes>True</ViewAllNodes>
   <DetailLevel>ReturnAll</DetailLevel>
@@ -27,16 +27,18 @@ const (
 </GetCategoriesRequest>`
 )
 
+// Downloader structure data
 type Downloader struct {
 }
 
+// NewDownloader return a downloader
 func NewDownloader() *Downloader {
 	downloader := &Downloader{}
 
 	return downloader
 }
 
-//
+// GetCategories return the requested categories
 func (d *Downloader) GetCategories() []*Category {
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, strings.NewReader(xmlData))

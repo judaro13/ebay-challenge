@@ -19,7 +19,7 @@ type GetCategoriesResponse struct {
 // Category contains the categories
 type Category struct {
 	XMLName          xml.Name    `xml:"Category"`
-	BestOfferEnabled bool        `xml:"BestOfferEnabled"`
+	BestOfferEnabled string      `xml:"BestOfferEnabled"`
 	ID               int         `xml:"CategoryID"`
 	Level            int         `xml:"CategoryLevel"`
 	Name             string      `xml:"CategoryName"`
